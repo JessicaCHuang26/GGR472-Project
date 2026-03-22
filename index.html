@@ -11,15 +11,27 @@
       href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css"
       rel="stylesheet"
     />
+    <!-- MAPBOX GEOCODER -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"
+      type="text/css"
+    />
     <!-- LINK CSS -->
     <link rel="stylesheet" href="style.css" />
-    <!-- LINK JS -->
-    <script src="script.js"></script>
     <!-- Turf.js -->
     <script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js"></script>
   </head>
   <body>
+    <!-- GEOCODER(FOR ROUTING) -->
+    <div id="controls">
+      <div id="geocoder-start"></div>
+      <div id="geocoder-end"></div>
+    </div>
     <!-- MAP CONTAINER -->
     <div id="map" class="map"></div>
+    <!-- LINK JS -->
+    <script src="script.js"></script>
   </body>
 </html>
