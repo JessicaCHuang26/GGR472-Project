@@ -1,37 +1,43 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SafeSteps Toronto</title>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SafeSteps Toronto</title>
 
-    <!-- MAPBOX API -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
-    <link
-      href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css"
-      rel="stylesheet"
-    />
-    <!-- MAPBOX GEOCODER -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"
-      type="text/css"
-    />
-    <!-- LINK CSS -->
-    <link rel="stylesheet" href="style.css" />
-    <!-- Turf.js -->
-    <script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js"></script>
-  </head>
-  <body>
-    <!-- GEOCODER(FOR ROUTING) -->
-    <div id="controls">
-      <div id="geocoder-start"></div>
-      <div id="geocoder-end"></div>
-    </div>
-    <!-- MAP CONTAINER -->
-    <div id="map" class="map"></div>
-    <!-- LINK JS -->
-    <script src="script.js"></script>
-  </body>
+<!-- MAPBOX -->
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet"/>
+
+<!-- GEOCODER -->
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+<link rel="stylesheet"
+href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"/>
+
+<!-- Turf -->
+<script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js"></script>
+
+<link rel="stylesheet" href="style.css" />
+
+</head>
+
+<body>
+
+<div id="controls">
+  <div id="geocoder-start"></div>
+  <div id="geocoder-end"></div>
+
+  <div id="info">
+    <h3>Route Safety</h3>
+    <div>Route 1 score: <span id="score0">--</span></div>
+    <div>Route 2 score: <span id="score1">--</span></div>
+    <div>Route 3 score: <span id="score2">--</span></div>
+  </div>
+</div>
+
+<div id="map" class="map"></div>
+
+<script src="script.js"></script>
+
+</body>
 </html>

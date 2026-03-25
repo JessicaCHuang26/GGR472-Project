@@ -19,3 +19,11 @@
 #geocoder-end {
   margin-bottom: 10px;
 }
+
+#info{
+  background:white;
+  padding:10px;
+  margin-top:10px;
+  border-radius:6px;
+  font-size:14px;
+}
