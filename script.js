@@ -51,11 +51,11 @@ WAIT FOR MAP + DATA BEFORE ADDING LAYERS
 
 const mapReady = new Promise(resolve => map.on("load", resolve));
 
-const incidentsReady = fetch("data/cleaned/toronto_incidents.geojson")
+const incidentsReady = fetch("https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/data/cleaned/toronto_incidents.geojson")
   .then(res => res.json())
   .then(data => { incidentsData = data; });
 
-const neighbourhoodReady = fetch("Neighbourhood_Crime_Rates.geojson")
+const neighbourhoodReady = fetch("https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/Neighbourhood_Crime_Rates.geojson")
   .then(res => res.json())
   .then(data => {
     neighbourhoodData = data;
@@ -207,7 +207,7 @@ function initLayers() {
   if (!map.getSource("police_stations")) {
     map.addSource("police_stations", {
       type: "geojson",
-      data: "Construction Features/Police Facility Locations - 4326.geojson"
+      data: "https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/Construction%20Features/Police%20Facility%20Locations%20-%204326.geojson"
     });
   }
 
