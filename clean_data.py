@@ -5,7 +5,7 @@ import geojson
 # SETTINGS
 # -----------------------------
 
-YEAR_FILTER = 2019
+YEAR_FILTER = 2022
 
 weights = {
     "assault": 3,
