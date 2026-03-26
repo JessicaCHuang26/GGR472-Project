@@ -676,14 +676,38 @@ const rateFilterExpr = ["+",
   ["coalesce", ["get", "HOMICIDE_RATE_2022"], 0]
 ];
 
-document.getElementById("risk-slider").addEventListener("input", (e) => {
-  const idx       = parseInt(e.target.value);
-  const threshold = RISK_THRESHOLDS[idx];
-  document.getElementById("risk-slider-label").textContent = t(RISK_LABEL_KEYS[idx]);
+document.getElementById("risk-filter").addEventListener("change", (e) => {
 
-  if (map.getLayer("neighbourhood_crime")) {
-    map.setFilter("neighbourhood_crime",
-      threshold === 0 ? null : [">=", rateFilterExpr, threshold]
-    );
+  const value = e.target.value;
+
+  if (!map.getLayer("neighbourhood_crime")) return;
+
+  let filter = null;
+
+  if (value === "low") {
+    filter = ["<", rateFilterExpr, 595];
   }
+
+  if (value === "moderate") {
+    filter = [
+      "all",
+      [">=", rateFilterExpr, 595],
+      ["<", rateFilterExpr, 807]
+    ];
+  }
+
+  if (value === "high") {
+    filter = [
+      "all",
+      [">=", rateFilterExpr, 807],
+      ["<", rateFilterExpr, 1008]
+    ];
+  }
+
+  if (value === "danger") {
+    filter = [">=", rateFilterExpr, 1008];
+  }
+
+  map.setFilter("neighbourhood_crime", filter);
+
 });

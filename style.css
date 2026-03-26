@@ -518,7 +518,7 @@ LEGEND (inside left panel)
 .layer-toggle input:checked + .toggle-track::after { transform: translateX(12px); }
 
 /*--------------------------------------------------------------------
-RISK SLIDER
+RISK FILTER (slider + dropdown)
 --------------------------------------------------------------------*/
 
 .risk-slider {
@@ -543,6 +543,48 @@ RISK SLIDER
   font-size: 11px;
   color: var(--secondary);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+/* RISK FILTER DROPDOWN */
+
+.dropdown-wrapper {
+  position: relative;
+  margin-top: 8px;
+}
+
+.risk-dropdown {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d2d2d2;
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+  appearance: none;
+  transition: all 0.2s ease;
+}
+
+/* subtle shadow + cleaner look */
+.risk-dropdown:hover {
+  border-color: #a0a0a0;
+}
+
+.risk-dropdown:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(66,204,197,0.2);
+}
+
+/* custom arrow */
+.dropdown-wrapper::after {
+  content: "▼";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #666;
+  pointer-events: none;
 }
 
 /*--------------------------------------------------------------------
@@ -639,3 +681,4 @@ HOVER TOOLTIP
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+

@@ -140,14 +140,16 @@
     <div class="panel-divider"></div>
 
     <div class="section-label">FILTER BY RISK</div>
-    <input type="range" id="risk-slider" min="0" max="3" step="1" value="0" class="risk-slider">
-    <div class="slider-labels">
-      <span>All</span>
-      <span>Mod+</span>
-      <span>High+</span>
-      <span>Danger</span>
+
+    <div class="dropdown-wrapper">
+      <select id="risk-filter" class="risk-dropdown">
+        <option value="all">Show all areas</option>
+        <option value="low">Low risk</option>
+        <option value="moderate">Moderate risk</option>
+        <option value="high">High risk</option>
+        <option value="danger">Danger zones</option>
+      </select>
     </div>
-    <div id="risk-slider-label" class="slider-value-label">Showing all areas</div>
   </div>
 
   <!-- ── Map Layers ── -->
