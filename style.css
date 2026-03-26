@@ -1,4 +1,7 @@
-/*Map Style*/
+/*--------------------------------------------------------------------
+MAP
+--------------------------------------------------------------------*/
+
 .map {
   position: absolute;
   top: 0;
@@ -7,23 +10,301 @@
   right: 0;
   width: 100%;
 }
+
+/*--------------------------------------------------------------------
+CONTROLS (top-left)
+--------------------------------------------------------------------*/
+
 #controls {
   position: absolute;
   top: 10px;
   left: 10px;
-  width: 300px;
+  width: 320px;
+  z-index: 10;
+}
+
+/* Google Maps-style search card */
+#search-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  gap: 8px;
+  overflow: visible;
+}
+
+/* Left icons column */
+#search-icons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 4px 0;
+}
+
+#icon-circle {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #555;
+  display: block;
+}
+
+#icon-dots {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+#icon-pin {
+  font-size: 14px;
+  color: #e31837;
+  line-height: 1;
+}
+
+/* Input fields column */
+#search-inputs {
+  flex: 1;
+  min-width: 0;
+}
+
+#geocoder-start {
+  position: relative;
+  z-index: 2;
+}
+
+#geocoder-end {
+  position: relative;
   z-index: 1;
 }
 
-#geocoder-start,
-#geocoder-end {
-  margin-bottom: 10px;
+/* Strip Mapbox geocoder to bare input */
+#geocoder-start .mapboxgl-ctrl-geocoder,
+#geocoder-end .mapboxgl-ctrl-geocoder {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-shadow: none;
+  background: transparent;
 }
 
-#info{
-  background:white;
-  padding:10px;
-  margin-top:10px;
-  border-radius:6px;
-  font-size:14px;
+#geocoder-start .mapboxgl-ctrl-geocoder--icon-search,
+#geocoder-end .mapboxgl-ctrl-geocoder--icon-search {
+  display: none;
+}
+
+#geocoder-start .mapboxgl-ctrl-geocoder--input,
+#geocoder-end .mapboxgl-ctrl-geocoder--input {
+  padding: 6px 30px 6px 4px;
+  font-size: 14px;
+  height: auto;
+}
+
+/* Dropdown — must escape the card and appear above map */
+#geocoder-start .mapboxgl-ctrl-geocoder,
+#geocoder-end .mapboxgl-ctrl-geocoder {
+  overflow: visible;
+}
+
+.mapboxgl-ctrl-geocoder .suggestions {
+  position: absolute !important;
+  z-index: 9999 !important;
+  width: 300px;
+  left: 0;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Thin divider line between inputs */
+#input-divider {
+  height: 1px;
+  background: #ebebeb;
+  margin: 2px 0;
+}
+
+/* Swap button */
+#swap-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+#swap-btn:hover {
+  background: #f5f5f5;
+}
+
+/* Start / end markers */
+.custom-marker {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.marker-start {
+  background: #1976d2;
+}
+
+.marker-end {
+  background: #e31837;
+}
+
+/* Route mode toggle */
+#route-toggle {
+  display: flex;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.toggle-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 8px 0;
+  font-size: 13px;
+  cursor: pointer;
+  color: #555;
+  border-right: 1px solid #eee;
+  transition: background 0.15s;
+}
+
+.toggle-btn:last-child {
+  border-right: none;
+}
+
+.toggle-btn.active {
+  background: #1976d2;
+  color: white;
+  font-weight: bold;
+}
+
+.toggle-btn:hover:not(.active) {
+  background: #f0f0f0;
+}
+
+#status {
+  background: #fff8e1;
+  border: 1px solid #f9a825;
+  color: #555;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-top: 6px;
+}
+
+#info {
+  background: white;
+  padding: 12px 14px;
+  margin-top: 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+#info h3 {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+}
+
+.route-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.route-sub {
+  width: 100%;
+  font-size: 12px;
+  color: #666;
+  padding-left: 18px;
+  margin-top: 2px;
+}
+
+/*--------------------------------------------------------------------
+LEGEND (bottom-right)
+--------------------------------------------------------------------*/
+
+#legend {
+  position: absolute;
+  bottom: 30px;
+  right: 10px;
+  background: white;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  z-index: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  min-width: 170px;
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid #ccc;
+  flex-shrink: 0;
+}
+
+.legend-circle {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 20px;
+  height: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-divider {
+  border-top: 1px solid #eee;
+  margin: 8px 0;
 }
