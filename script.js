@@ -651,9 +651,15 @@ function addRouteLayer(label, geometry, color) {
 }
 
 function setStatus(msg) {
-  const el = document.getElementById("status");
-  el.innerText = msg;
-  el.style.display = msg ? "block" : "none";
+  const modal = document.getElementById("loading-modal");
+  const text = document.getElementById("loading-text");
+
+  if (msg) {
+    text.innerText = msg;
+    modal.style.display = "flex";
+  } else {
+    modal.style.display = "none";
+  }
 }
 
 /*--------------------------------------------------------------------
