@@ -1,77 +1,29 @@
 /*--------------------------------------------------------------------
-LANGUAGE SYSTEM
+STRINGS
 --------------------------------------------------------------------*/
 
-const LANG = {
-  en: {
-    startPlaceholder: "Enter start location",
-    endPlaceholder:   "Enter destination",
-    fastest:          "Fastest",
-    safest:           "Safest",
-    both:             "Both",
-    min:              "min",
-    fewerIncidents:   "% fewer incidents near route",
-    similarRisk:      "Similar risk level",
-    sameRoute:        "This is the fastest and safest route available.",
-    calculating:      "Calculating routes...",
-    noRoute:          "No route found between these locations.",
-    loadingData:      "Still loading data, please wait...",
-    safetyWarning:    "⚠️ Route passes through a high-crime area. Stay alert.",
-    landmarks:        "Popular Destinations",
-    myLocation:       "My location",
-    legendTitle:      "Crime Risk Level",
-    low:              "Low Risk",
-    moderate:         "Moderate Risk",
-    high:             "High Risk",
-    danger:           "Danger",
-    ttcStops:         "TTC stops (high-risk areas)",
-    policeStation:    "Police station",
-    fastestRoute:     "Fastest route",
-    safestRoute:      "Safest route",
-  },
-  fr: {
-    startPlaceholder: "Point de départ",
-    endPlaceholder:   "Destination",
-    fastest:          "Plus rapide",
-    safest:           "Plus sûr",
-    both:             "Les deux",
-    min:              "min",
-    fewerIncidents:   "% moins d'incidents",
-    similarRisk:      "Niveau de risque similaire",
-    sameRoute:        "Itinéraire le plus rapide et le plus sûr disponible.",
-    calculating:      "Calcul en cours...",
-    noRoute:          "Aucun itinéraire trouvé.",
-    loadingData:      "Chargement des données...",
-    safetyWarning:    "⚠️ L'itinéraire traverse une zone à risque élevé. Restez vigilant.",
-    landmarks:        "Destinations populaires",
-    myLocation:       "Ma position",
-    legendTitle:      "Niveau de risque criminel",
-    low:              "Faible risque",
-    moderate:         "Risque modéré",
-    high:             "Risque élevé",
-    danger:           "Danger",
-    ttcStops:         "Arrêts TTC (zones à risque)",
-    policeStation:    "Poste de police",
-    fastestRoute:     "Itinéraire le plus rapide",
-    safestRoute:      "Itinéraire le plus sûr",
-  },
+const STRINGS = {
+  startPlaceholder: "Enter start location",
+  endPlaceholder:   "Enter destination",
+  fastest:          "Fastest",
+  safest:           "Safest",
+  both:             "Both",
+  min:              "min",
+  fewerIncidents:   "% fewer incidents near route",
+  similarRisk:      "Similar risk level",
+  sameRoute:        "This is the fastest and safest route available.",
+  calculating:      "Calculating routes…",
+  noRoute:          "No route found between these locations.",
+  loadingData:      "Still loading data, please wait…",
+  safetyWarning:    "⚠️ Route passes through a high-crime area. Stay alert.",
+  myLocation:       "My location",
+  showingAll:       "Showing all areas",
+  showingMod:       "Showing Moderate Risk and above",
+  showingHigh:      "Showing High Risk and above",
+  showingDanger:    "Showing Danger zones only",
 };
 
-let currentLang = "en";
-
-function t(key) {
-  return LANG[currentLang][key] || LANG.en[key] || key;
-}
-
-function applyLanguage() {
-  document.querySelectorAll("[data-i18n]").forEach(el => {
-    el.textContent = t(el.dataset.i18n);
-  });
-  const startInput = document.querySelector("#geocoder-start input");
-  const endInput   = document.querySelector("#geocoder-end input");
-  if (startInput) startInput.placeholder = t("startPlaceholder");
-  if (endInput)   endInput.placeholder   = t("endPlaceholder");
-}
+function t(key) { return STRINGS[key] || key; }
 
 /*--------------------------------------------------------------------
 INITIALIZE MAP
@@ -91,6 +43,7 @@ const map = new mapboxgl.Map({
 
 let incidentsData    = null;
 let neighbourhoodData = null;
+let cityAvgRate      = 700;   // updated once data loads
 
 /*--------------------------------------------------------------------
 WAIT FOR MAP + DATA BEFORE ADDING LAYERS
@@ -104,7 +57,16 @@ const incidentsReady = fetch("data/cleaned/toronto_incidents.geojson")
 
 const neighbourhoodReady = fetch("Neighbourhood_Crime_Rates.geojson")
   .then(res => res.json())
-  .then(data => { neighbourhoodData = data; });
+  .then(data => {
+    neighbourhoodData = data;
+    // compute city-wide average for tooltip comparison
+    const rates = data.features.map(f => {
+      const p = f.properties;
+      return (p.ASSAULT_RATE_2022||0)+(p.ROBBERY_RATE_2022||0)+
+             (p.SHOOTING_RATE_2022||0)+(p.HOMICIDE_RATE_2022||0);
+    });
+    cityAvgRate = rates.reduce((a,b)=>a+b,0) / rates.length;
+  });
 
 Promise.all([mapReady, incidentsReady, neighbourhoodReady]).then(initLayers);
 
@@ -120,8 +82,17 @@ function initLayers() {
     map.addSource("neighbourhood_crime", {
       type: "geojson",
       data: neighbourhoodData,
+      generateId: true,          // required for featureState hover
     });
   }
+
+  // Helpers for rate expression (reused in both hover and normal paint)
+  const rateExpr = ["+",
+    ["coalesce", ["get", "ASSAULT_RATE_2022"],  0],
+    ["coalesce", ["get", "ROBBERY_RATE_2022"],  0],
+    ["coalesce", ["get", "SHOOTING_RATE_2022"], 0],
+    ["coalesce", ["get", "HOMICIDE_RATE_2022"], 0]
+  ];
 
   if (!map.getLayer("neighbourhood_crime")) {
     map.addLayer({
@@ -129,45 +100,106 @@ function initLayers() {
       type: "fill",
       source: "neighbourhood_crime",
       paint: {
+        // Hover: brighter, more saturated colours; normal: original palette
         "fill-color": [
-          "interpolate", ["linear"],
-          ["+",
-            ["coalesce", ["get", "ASSAULT_RATE_2022"],  0],
-            ["coalesce", ["get", "ROBBERY_RATE_2022"],  0],
-            ["coalesce", ["get", "SHOOTING_RATE_2022"], 0],
-            ["coalesce", ["get", "HOMICIDE_RATE_2022"], 0]
+          "case", ["boolean", ["feature-state", "hover"], false],
+          ["interpolate", ["linear"], rateExpr,
+            200,  "#8DC4A4",
+            415,  "#6BAAA0",
+            595,  "#D97F7D",
+            807,  "#A84A4C",
+            1008, "#861C23",
+            3500, "#5A0A0D"
           ],
-          200,  "#fff5f0",
-          415,  "#fcbba1",
-          595,  "#fb6a4a",
-          807,  "#de2d26",
-          1008, "#a50f15",
-          3500, "#67000d"
+          ["interpolate", ["linear"], rateExpr,
+            200,  "#DDEBE5",
+            415,  "#C0D7C9",
+            595,  "#DFB7B5",
+            807,  "#BD7577",
+            1008, "#A74249",
+            3500, "#8B1E21"
+          ]
         ],
-        "fill-opacity": 0.5,
-        "fill-outline-color": "#cccccc",
+        "fill-opacity": [
+          "case", ["boolean", ["feature-state", "hover"], false],
+          0.85,
+          0.5
+        ],
+        "fill-outline-color": [
+          "case", ["boolean", ["feature-state", "hover"], false],
+          "#444444",
+          "#cccccc"
+        ],
       },
     });
 
-    map.on("click", "neighbourhood_crime", (e) => {
-      if (map.queryRenderedFeatures(e.point, { layers: ["police_stations"] }).length > 0) return;
-      const p = e.features[0].properties;
-      const rate = (
-        (p.ASSAULT_RATE_2022 || 0) + (p.ROBBERY_RATE_2022 || 0) +
+    // --- Hover: featureState + floating tooltip ---
+    let hoveredId = null;
+    const tooltip = document.getElementById("hover-tooltip");
+
+    // Metadata for each risk tier
+    const LEVEL_META = {
+      danger:   { label: "Danger",        bg: "#8B1E21", desc: "High crime area — exercise caution" },
+      high:     { label: "High Risk",     bg: "#A74249", desc: "Higher crime area — take precautions" },
+      moderate: { label: "Moderate Risk", bg: "#BD7577", desc: "Some crime activity — stay aware" },
+      low:      { label: "Low Risk",      bg: "#6BAAA0", desc: "Relatively safe area" },
+    };
+
+    map.on("mousemove", "neighbourhood_crime", (e) => {
+      map.getCanvas().style.cursor = "pointer";
+      if (!e.features.length) return;
+
+      const feat = e.features[0];
+      if (hoveredId !== null && hoveredId !== feat.id) {
+        map.setFeatureState({ source: "neighbourhood_crime", id: hoveredId }, { hover: false });
+      }
+      hoveredId = feat.id;
+      map.setFeatureState({ source: "neighbourhood_crime", id: hoveredId }, { hover: true });
+
+      // Build tourist-friendly tooltip
+      const p    = feat.properties;
+      const rate = Math.round(
+        (p.ASSAULT_RATE_2022  || 0) + (p.ROBBERY_RATE_2022  || 0) +
         (p.SHOOTING_RATE_2022 || 0) + (p.HOMICIDE_RATE_2022 || 0)
-      ).toFixed(0);
-      const level = rate >= 1008 ? t("danger")
-                  : rate >= 807  ? t("high")
-                  : rate >= 595  ? t("moderate")
-                  : t("low");
-      new mapboxgl.Popup()
-        .setLngLat(e.lngLat)
-        .setHTML(`<b>${p.AREA_NAME}</b><br>${level}`)
-        .addTo(map);
+      );
+      const key  = rate >= 1008 ? "danger" : rate >= 807 ? "high" : rate >= 595 ? "moderate" : "low";
+      const meta = LEVEL_META[key];
+
+      // How this area compares to city average
+      const diff    = Math.abs(Math.round(((rate - cityAvgRate) / cityAvgRate) * 100));
+      const compare = rate > cityAvgRate
+        ? `${diff}% above city average`
+        : rate < cityAvgRate
+          ? `${diff}% below city average`
+          : "At city average";
+
+      document.getElementById("hover-name").textContent = p.AREA_NAME;
+
+      const lvlEl = document.getElementById("hover-level");
+      lvlEl.textContent      = meta.label;
+      lvlEl.style.background = meta.bg;
+      tooltip.style.borderLeftColor = meta.bg;
+
+      document.getElementById("hover-desc").textContent    = meta.desc;
+      document.getElementById("hover-compare").textContent = compare;
+
+      // Position near cursor, flip left if near right edge
+      const x    = e.originalEvent.clientX;
+      const y    = e.originalEvent.clientY;
+      const offX = x > window.innerWidth - 230 ? -215 : 15;
+      tooltip.style.left    = (x + offX) + "px";
+      tooltip.style.top     = (y - 10)   + "px";
+      tooltip.style.display = "block";
     });
 
-    map.on("mouseenter", "neighbourhood_crime", () => { map.getCanvas().style.cursor = "pointer"; });
-    map.on("mouseleave", "neighbourhood_crime", () => { map.getCanvas().style.cursor = ""; });
+    map.on("mouseleave", "neighbourhood_crime", () => {
+      map.getCanvas().style.cursor = "";
+      if (hoveredId !== null) {
+        map.setFeatureState({ source: "neighbourhood_crime", id: hoveredId }, { hover: false });
+        hoveredId = null;
+      }
+      tooltip.style.display = "none";
+    });
   }
 
   /*-- POLICE STATIONS --*/
@@ -292,19 +324,6 @@ document.querySelectorAll(".landmark-btn").forEach(btn => {
     if (input) input.value = btn.textContent;
     map.flyTo({ center: endCoords, zoom: Math.max(map.getZoom(), 14) });
     getRoute();
-  });
-});
-
-/*--------------------------------------------------------------------
-LANGUAGE TOGGLE
---------------------------------------------------------------------*/
-
-document.querySelectorAll(".lang-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    currentLang = btn.dataset.lang;
-    document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    applyLanguage();
   });
 });
 
@@ -548,3 +567,29 @@ function setStatus(msg) {
   el.innerText = msg;
   el.style.display = msg ? "block" : "none";
 }
+
+/*--------------------------------------------------------------------
+RISK LEVEL SLIDER
+--------------------------------------------------------------------*/
+
+const RISK_THRESHOLDS  = [0, 595, 807, 1008];
+const RISK_LABEL_KEYS  = ["showingAll", "showingMod", "showingHigh", "showingDanger"];
+
+const rateFilterExpr = ["+",
+  ["coalesce", ["get", "ASSAULT_RATE_2022"],  0],
+  ["coalesce", ["get", "ROBBERY_RATE_2022"],  0],
+  ["coalesce", ["get", "SHOOTING_RATE_2022"], 0],
+  ["coalesce", ["get", "HOMICIDE_RATE_2022"], 0]
+];
+
+document.getElementById("risk-slider").addEventListener("input", (e) => {
+  const idx       = parseInt(e.target.value);
+  const threshold = RISK_THRESHOLDS[idx];
+  document.getElementById("risk-slider-label").textContent = t(RISK_LABEL_KEYS[idx]);
+
+  if (map.getLayer("neighbourhood_crime")) {
+    map.setFilter("neighbourhood_crime",
+      threshold === 0 ? null : [">=", rateFilterExpr, threshold]
+    );
+  }
+});
