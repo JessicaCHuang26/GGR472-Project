@@ -560,28 +560,50 @@ function applyRouteMode() {
   });
   const fastestRow = document.getElementById("fastest-row");
   const safestRow  = document.getElementById("safest-row");
-  if (fastestRow) fastestRow.style.display = routeMode === "safest"  ? "none" : "flex";
-  if (safestRow)  safestRow.style.display  = routeMode === "fastest" ? "none" : "flex";
+  if (fastestRow) {
+    fastestRow.style.display = routeMode === "safest"  ? "none" : "flex";
+    fastestRow.classList.toggle("active-route", routeMode === "fastest");
+  }
+  if (safestRow) {
+    safestRow.style.display  = routeMode === "fastest" ? "none" : "flex";
+    safestRow.classList.toggle("active-route", routeMode === "safest");
+  }
 }
+
+// Click on route row to toggle showing only that route
+document.getElementById("fastest-row").addEventListener("click", () => {
+  routeMode = routeMode === "fastest" ? "both" : "fastest";
+  document.querySelectorAll(".toggle-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.mode === routeMode);
+  });
+  applyRouteMode();
+});
+
+document.getElementById("safest-row").addEventListener("click", () => {
+  routeMode = routeMode === "safest" ? "both" : "safest";
+  document.querySelectorAll(".toggle-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.mode === routeMode);
+  });
+  applyRouteMode();
+});
 
 /*--------------------------------------------------------------------
 COLLAPSIBLE PANELS
 --------------------------------------------------------------------*/
 
-function initCollapsible(headerId, bodyId) {
+function initCollapsible(headerId, bodyId, openDisplay) {
   const header = document.getElementById(headerId);
-  const body   = document.getElementById(bodyId) ||
-                 header?.nextElementSibling;
+  const body   = document.getElementById(bodyId) || header?.nextElementSibling;
   if (!header || !body) return;
   header.addEventListener("click", () => {
     const isOpen = body.style.display !== "none";
-    body.style.display = isOpen ? "none" : "";  // "" lets CSS grid/flex take over
+    body.style.display = isOpen ? "none" : (openDisplay || "block");
     header.classList.toggle("open", !isOpen);
   });
 }
 
-initCollapsible("landmarks-toggle", "landmarks-grid");
-initCollapsible("layers-toggle",    "layers-body");
+initCollapsible("landmarks-toggle", "landmarks-grid", "flex");
+initCollapsible("layers-toggle",    "layers-body",    "block");
 
 // Expand Popular Destinations when search is focused
 setTimeout(() => {
@@ -590,7 +612,7 @@ setTimeout(() => {
       const grid = document.getElementById("landmarks-grid");
       const toggle = document.getElementById("landmarks-toggle");
       if (grid && grid.style.display === "none") {
-        grid.style.display = "";   // let CSS grid take over
+        grid.style.display = "flex";
         toggle?.classList.add("open");
       }
     });
@@ -628,7 +650,7 @@ function clearRoutes() {
     if (map.getLayer("route-" + label)) map.removeLayer("route-" + label);
     if (map.getSource("route-" + label)) map.removeSource("route-" + label);
   });
-  document.getElementById("route-toggle").style.display = "none";
+  document.getElementById("route-panel").style.display = "none";
 }
 
 /*--------------------------------------------------------------------
@@ -769,7 +791,7 @@ async function getRoute() {
   }
 
   document.getElementById("info").style.display = "block";
-  document.getElementById("route-toggle").style.display = "flex";
+  document.getElementById("route-panel").style.display = "flex";
   applyRouteMode();
 
   // Fit map to show full routes
