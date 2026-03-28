@@ -1,235 +1,351 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SafeSteps Toronto</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SafeSteps Toronto</title>
 
-<!-- MAPBOX -->
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet"/>
+    <!-- MAPBOX -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
 
-<!-- GEOCODER -->
-<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"/>
+    <!-- GEOCODER -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"
+    />
 
-<!-- Turf -->
-<script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js"></script>
+    <!-- Turf -->
+    <script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js"></script>
 
-<link rel="stylesheet" href="style.css" />
-</head>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<body>
+  <body>
+    <div id="controls">
+      <!-- Search card -->
+      <div id="search-card">
+        <div id="search-icons">
+          <span id="icon-circle"></span>
+          <span id="icon-dots">&#8942;</span>
+          <span id="icon-pin">&#9679;</span>
+        </div>
+        <div id="search-inputs">
+          <div id="geocoder-start"></div>
+          <div id="input-divider"></div>
+          <div id="geocoder-end"></div>
+        </div>
+        <div id="search-btns">
+          <button id="gps-btn" title="Use my location">&#x1F4CD;</button>
+          <button id="swap-btn" title="Swap">&#8693;</button>
+        </div>
+      </div>
 
+      <!-- Popular destinations -->
+      <div class="panel-card">
+        <div class="section-label collapsible-header" id="landmarks-toggle">
+          POPULAR DESTINATIONS <span class="collapse-arrow">▾</span>
+        </div>
+        <div id="landmarks-grid" class="collapsible-body" style="display: none">
+          <button class="landmark-btn" data-lng="-79.3871" data-lat="43.6426">
+            CN Tower
+          </button>
+          <button class="landmark-btn" data-lng="-79.3832" data-lat="43.6452">
+            Union Station
+          </button>
+          <button class="landmark-btn" data-lng="-79.3803" data-lat="43.6545">
+            Eaton Centre
+          </button>
+          <button class="landmark-btn" data-lng="-79.3947" data-lat="43.6677">
+            ROM
+          </button>
+          <button class="landmark-btn" data-lng="-79.4007" data-lat="43.6543">
+            Kensington Market
+          </button>
+          <button class="landmark-btn" data-lng="-79.3594" data-lat="43.6503">
+            Distillery District
+          </button>
+          <button class="landmark-btn" data-lng="-79.3716" data-lat="43.6488">
+            St. Lawrence Market
+          </button>
+          <button class="landmark-btn" data-lng="-79.4637" data-lat="43.6468">
+            High Park
+          </button>
+        </div>
+      </div>
 
-<div id="controls">
+      <!-- ── Crime Risk Legend ── -->
+      <div class="panel-card" id="legend-section">
+        <div class="section-label">CRIME RISK LEVEL</div>
+        <div class="legend-row">
+          <span class="legend-swatch" style="background: #ffe082"></span
+          ><span>Low Risk</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-swatch" style="background: #ffb74d"></span
+          ><span>Moderate Risk</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-swatch" style="background: #ef5350"></span
+          ><span>High Risk</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-swatch" style="background: #b71c1c"></span
+          ><span>Danger</span>
+        </div>
 
-  <!-- Search card -->
-  <div id="search-card">
-    <div id="search-icons">
-      <span id="icon-circle"></span>
-      <span id="icon-dots">&#8942;</span>
-      <span id="icon-pin">&#9679;</span>
-    </div>
-    <div id="search-inputs">
-      <div id="geocoder-start"></div>
-      <div id="input-divider"></div>
-      <div id="geocoder-end"></div>
-    </div>
-    <div id="search-btns">
-      <button id="gps-btn" title="Use my location">&#x1F4CD;</button>
-      <button id="swap-btn" title="Swap">&#8693;</button>
-    </div>
-  </div>
+        <div class="panel-divider"></div>
 
-  <!-- Popular destinations -->
-  <div class="panel-card">
-    <div class="section-label collapsible-header" id="landmarks-toggle">
-      POPULAR DESTINATIONS <span class="collapse-arrow">▾</span>
-    </div>
-    <div id="landmarks-grid" class="collapsible-body" style="display:none">
-      <button class="landmark-btn" data-lng="-79.3871" data-lat="43.6426">CN Tower</button>
-      <button class="landmark-btn" data-lng="-79.3832" data-lat="43.6452">Union Station</button>
-      <button class="landmark-btn" data-lng="-79.3803" data-lat="43.6545">Eaton Centre</button>
-      <button class="landmark-btn" data-lng="-79.3947" data-lat="43.6677">ROM</button>
-      <button class="landmark-btn" data-lng="-79.4007" data-lat="43.6543">Kensington Market</button>
-      <button class="landmark-btn" data-lng="-79.3594" data-lat="43.6503">Distillery District</button>
-      <button class="landmark-btn" data-lng="-79.3716" data-lat="43.6488">St. Lawrence Market</button>
-      <button class="landmark-btn" data-lng="-79.4637" data-lat="43.6468">High Park</button>
-    </div>
-  </div>
+        <div class="section-label">FILTER BY RISK</div>
 
+        <div class="dropdown-wrapper">
+          <select id="risk-filter" class="risk-dropdown">
+            <option value="all">Show all areas</option>
+            <option value="low">Low risk</option>
+            <option value="moderate">Moderate risk</option>
+            <option value="high">High risk</option>
+            <option value="danger">Danger zones</option>
+          </select>
+        </div>
+        <div class="panel-divider"></div>
 
-  <!-- ── Crime Risk Legend ── -->
-  <div class="panel-card" id="legend-section">
-    <div class="section-label">CRIME RISK LEVEL</div>
-    <div class="legend-row"><span class="legend-swatch" style="background:#FFE082"></span><span>Low Risk</span></div>
-    <div class="legend-row"><span class="legend-swatch" style="background:#FFB74D"></span><span>Moderate Risk</span></div>
-    <div class="legend-row"><span class="legend-swatch" style="background:#EF5350"></span><span>High Risk</span></div>
-    <div class="legend-row"><span class="legend-swatch" style="background:#B71C1C"></span><span>Danger</span></div>
+        <div class="section-label">INCIDENT YEAR</div>
 
-    <div class="panel-divider"></div>
+        <input
+          type="range"
+          id="year-slider"
+          class="risk-slider"
+          min="2022"
+          max="2024"
+          step="1"
+          value="2022"
+        />
 
-    <div class="section-label">FILTER BY RISK</div>
+        <div class="slider-labels">
+          <span>2022</span>
+          <span>2023</span>
+          <span>2024</span>
+        </div>
 
-    <div class="dropdown-wrapper">
-      <select id="risk-filter" class="risk-dropdown">
-        <option value="all">Show all areas</option>
-        <option value="low">Low risk</option>
-        <option value="moderate">Moderate risk</option>
-        <option value="high">High risk</option>
-        <option value="danger">Danger zones</option>
-      </select>
-    </div>
-  </div>
+        <div class="slider-value-label">
+          Showing route safety for <span id="year-value">2022</span>
+        </div>
+      </div>
 
-  <!-- ── Map Layers ── -->
-  <div class="panel-card" id="layers-section">
-    <div class="section-label collapsible-header" id="layers-toggle">
-      MAP LAYERS <span class="collapse-arrow">▾</span>
-    </div>
-    <div class="collapsible-body" id="layers-body" style="display:none">
-    <div class="legend-row legend-toggle-row">
-      <label class="layer-toggle">
-        <input type="checkbox" id="police-toggle" checked>
-        <span class="toggle-track"></span>
-      </label>
-      <span class="legend-circle" style="background:#1565c0"></span>
-      <span>Police station</span>
-    </div>
-    <div class="legend-row legend-toggle-row">
-      <label class="layer-toggle">
-        <input type="checkbox" id="subway-toggle" checked>
-        <span class="toggle-track"></span>
-      </label>
-      <span>TTC Subway Lines</span>
-    </div>
+      <!-- ── Map Layers ── -->
+      <div class="panel-card" id="layers-section">
+        <div class="section-label collapsible-header" id="layers-toggle">
+          MAP LAYERS <span class="collapse-arrow">▾</span>
+        </div>
+        <div class="collapsible-body" id="layers-body" style="display: none">
+          <div class="legend-row legend-toggle-row">
+            <label class="layer-toggle">
+              <input type="checkbox" id="police-toggle" checked />
+              <span class="toggle-track"></span>
+            </label>
+            <span class="legend-circle" style="background: #1565c0"></span>
+            <span>Police station</span>
+          </div>
+          <div class="legend-row legend-toggle-row">
+            <label class="layer-toggle">
+              <input type="checkbox" id="subway-toggle" checked />
+              <span class="toggle-track"></span>
+            </label>
+            <span>TTC Subway Lines</span>
+          </div>
 
-    <div class="legend-row">
-      <span class="legend-line" style="background:#FFD100"></span>
-      <span>Line 1 – Yonge-University</span>
-    </div>
+          <div class="legend-row">
+            <span class="legend-line" style="background: #ffd100"></span>
+            <span>Line 1 – Yonge-University</span>
+          </div>
 
-    <div class="legend-row">
-      <span class="legend-line" style="background:#00A651"></span>
-      <span>Line 2 – Bloor-Danforth</span>
-    </div>
+          <div class="legend-row">
+            <span class="legend-line" style="background: #00a651"></span>
+            <span>Line 2 – Bloor-Danforth</span>
+          </div>
 
-    <div class="legend-row">
-      <span class="legend-line" style="background:#0082C8"></span>
-      <span>Line 3 – Scarborough</span>
-    </div>
+          <div class="legend-row">
+            <span class="legend-line" style="background: #0082c8"></span>
+            <span>Line 3 – Scarborough</span>
+          </div>
 
-    <div class="legend-row">
-      <span class="legend-line" style="background:#A05EB5"></span>
-      <span>Line 4 – Sheppard</span>
-    </div>
-    <div class="legend-row"><span class="legend-line" style="background:#42ccc5"></span><span>Fastest route</span></div>
-    <div class="legend-row"><span class="legend-line" style="background:#3cd649"></span><span>Safest route</span></div>
-    </div><!-- end layers-body -->
-  </div>
-
-</div>
-
-<!-- ── Right-side Route Comparison Panel ── -->
-<div id="route-panel" style="display:none">
-  <div id="status" style="display:none"></div>
-  <div id="safety-warning" style="display:none">
-    Route passes through a high-crime area. Stay alert.
-  </div>
-  <div id="route-toggle">
-    <button class="toggle-btn active" data-mode="both">Both</button>
-    <button class="toggle-btn" data-mode="fastest">Fastest</button>
-    <button class="toggle-btn" data-mode="safest">Safest</button>
-  </div>
-  <div id="info" style="display:none">
-    <div id="fastest-row" class="route-row" title="Click to show only this route">
-      <span class="swatch" style="background:#42ccc5"></span>
-      <div class="route-row-text">
-        <b>Fastest Route</b>
-        <span id="fastest-time" class="route-time">--</span>
+          <div class="legend-row">
+            <span class="legend-line" style="background: #a05eb5"></span>
+            <span>Line 4 – Sheppard</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-line" style="background: #42ccc5"></span
+            ><span>Fastest route</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-line" style="background: #3cd649"></span
+            ><span>Safest route</span>
+          </div>
+        </div>
+        <!-- end layers-body -->
       </div>
     </div>
-    <div id="safest-row" class="route-row" title="Click to show only this route">
-      <span class="swatch" style="background:#3cd649"></span>
-      <div class="route-row-text">
-        <b>Safest Route</b>
-        <span id="safest-time" class="route-time">--</span>
+
+    <!-- ── Right-side Route Comparison Panel ── -->
+    <div id="route-panel" style="display: none">
+      <div id="status" style="display: none"></div>
+      <div id="safety-warning" style="display: none">
+        Route passes through a high-crime area. Stay alert.
       </div>
-      <div class="route-sub"><span id="safest-reduction"></span></div>
+      <div id="route-toggle">
+        <button class="toggle-btn active" data-mode="both">Both</button>
+        <button class="toggle-btn" data-mode="fastest">Fastest</button>
+        <button class="toggle-btn" data-mode="safest">Safest</button>
+      </div>
+      <div id="info" style="display: none">
+        <div
+          id="fastest-row"
+          class="route-row"
+          title="Click to show only this route"
+        >
+          <span class="swatch" style="background: #42ccc5"></span>
+          <div class="route-row-text">
+            <b>Fastest Route</b>
+            <span id="fastest-time" class="route-time">--</span>
+          </div>
+        </div>
+        <div
+          id="safest-row"
+          class="route-row"
+          title="Click to show only this route"
+        >
+          <span class="swatch" style="background: #3cd649"></span>
+          <div class="route-row-text">
+            <b>Safest Route</b>
+            <span id="safest-time" class="route-time">--</span>
+          </div>
+          <div class="route-sub"><span id="safest-reduction"></span></div>
+        </div>
+        <div id="same-route-note" style="display: none" class="route-sub">
+          This is the fastest and safest route available.
+        </div>
+      </div>
     </div>
-    <div id="same-route-note" style="display:none" class="route-sub">
-      This is the fastest and safest route available.
+
+    <!-- Hover tooltip -->
+    <div id="hover-tooltip">
+      <div id="hover-name"></div>
+      <div id="hover-level"></div>
+      <div id="hover-desc"></div>
+      <div id="hover-compare"></div>
     </div>
-  </div>
-</div>
 
-<!-- Hover tooltip -->
-<div id="hover-tooltip">
-  <div id="hover-name"></div>
-  <div id="hover-level"></div>
-  <div id="hover-desc"></div>
-  <div id="hover-compare"></div>
-</div>
-
-<!-- Onboarding welcome modal -->
-<div id="welcome-modal">
-  <div id="welcome-box">
-    <div id="welcome-logo-row">
-      <img src="logo.png" alt="SafeStep Toronto" id="welcome-logo">
+    <!-- Onboarding welcome modal -->
+    <div id="welcome-modal">
+      <div id="welcome-box">
+        <div id="welcome-logo-row">
+          <img src="logo.png" alt="SafeStep Toronto" id="welcome-logo" />
+        </div>
+        <p id="welcome-subtitle">
+          Navigate Toronto safely with real-time crime risk awareness
+        </p>
+        <ol id="welcome-steps">
+          <li>
+            <span class="step-icon">&#9711;</span> Enter a
+            <b>start location</b> or tap the pin to use GPS
+          </li>
+          <li>
+            <span class="step-icon">&#9679;</span> Enter a <b>destination</b> or
+            pick a popular landmark
+          </li>
+          <li>
+            <span class="step-icon">&#8644;</span> Choose <b>Fastest</b> or
+            <b>Safest</b> route — or both
+          </li>
+          <li>
+            <span class="step-icon">&#9650;</span> Hover neighbourhoods to see
+            their <b>crime risk level</b>
+          </li>
+        </ol>
+        <div id="welcome-sources">
+          <p id="welcome-sources-title">Data Sources</p>
+          <ul>
+            <li>
+              <a
+                href="https://data.tps.ca/maps/b4d0398d37eb4aa184065ed625ddb922"
+                target="_blank"
+                >Assault — Toronto Police Service</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://data.tps.ca/maps/64ddeca12da34403869968ec725e23c4"
+                target="_blank"
+                >Shooting — Toronto Police Service</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://data.tps.ca/datasets/d0e1e98de5f945faa2fe635dee3f4062_0/explore"
+                target="_blank"
+                >Robbery — Toronto Police Service</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://data.tps.ca/datasets/a96252bf61b84fc68c3926bb7485970e_0/explore"
+                target="_blank"
+                >Pedestrian KSI — Toronto Police Service</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://data.tps.ca/datasets/bc4c72a793014a55a674984ef175a6f3_0/explore"
+                target="_blank"
+                >Traffic Collisions — Toronto Police Service</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://open.toronto.ca/dataset/police-facility-locations/"
+                target="_blank"
+                >Police Facility Locations — City of Toronto</a
+              >
+            </li>
+          </ul>
+        </div>
+        <button id="welcome-btn" onclick="dismissWelcome()">Get Started</button>
+        <label id="welcome-skip">
+          <input type="checkbox" id="welcome-no-show" /> Don't show this again
+        </label>
+      </div>
     </div>
-    <p id="welcome-subtitle">Navigate Toronto safely with real-time crime risk awareness</p>
-    <ol id="welcome-steps">
-      <li><span class="step-icon">&#9711;</span> Enter a <b>start location</b> or tap the pin to use GPS</li>
-      <li><span class="step-icon">&#9679;</span> Enter a <b>destination</b> or pick a popular landmark</li>
-      <li><span class="step-icon">&#8644;</span> Choose <b>Fastest</b> or <b>Safest</b> route — or both</li>
-      <li><span class="step-icon">&#9650;</span> Hover neighbourhoods to see their <b>crime risk level</b></li>
-    </ol>
-    <div id="welcome-sources">
-      <p id="welcome-sources-title">Data Sources</p>
-      <ul>
-        <li><a href="https://data.tps.ca/maps/b4d0398d37eb4aa184065ed625ddb922" target="_blank">Assault — Toronto Police Service</a></li>
-        <li><a href="https://data.tps.ca/maps/64ddeca12da34403869968ec725e23c4" target="_blank">Shooting — Toronto Police Service</a></li>
-        <li><a href="https://data.tps.ca/datasets/d0e1e98de5f945faa2fe635dee3f4062_0/explore" target="_blank">Robbery — Toronto Police Service</a></li>
-        <li><a href="https://data.tps.ca/datasets/a96252bf61b84fc68c3926bb7485970e_0/explore" target="_blank">Pedestrian KSI — Toronto Police Service</a></li>
-        <li><a href="https://data.tps.ca/datasets/bc4c72a793014a55a674984ef175a6f3_0/explore" target="_blank">Traffic Collisions — Toronto Police Service</a></li>
-        <li><a href="https://open.toronto.ca/dataset/police-facility-locations/" target="_blank">Police Facility Locations — City of Toronto</a></li>
-      </ul>
+
+    <!-- Loading modal -->
+    <div id="loading-modal">
+      <div class="loading-box">
+        <div class="spinner"></div>
+        <div id="loading-text">Calculating safest route...</div>
+      </div>
     </div>
-    <button id="welcome-btn" onclick="dismissWelcome()">Get Started</button>
-    <label id="welcome-skip">
-      <input type="checkbox" id="welcome-no-show"> Don't show this again
-    </label>
-  </div>
-</div>
 
-<!-- Loading modal -->
-<div id="loading-modal">
-  <div class="loading-box">
-    <div class="spinner"></div>
-    <div id="loading-text">Calculating safest route...</div>
-  </div>
-</div>
+    <div id="map" class="map"></div>
 
-<div id="map" class="map"></div>
+    <script src="script.js"></script>
 
-<script src="script.js"></script>
+    <script>
+      function dismissWelcome() {
+        if (document.getElementById("welcome-no-show").checked) {
+          localStorage.setItem("safestep_seen", "1");
+        }
+        document.getElementById("welcome-modal").style.display = "none";
+      }
 
-<script>
-  function dismissWelcome() {
-    if (document.getElementById("welcome-no-show").checked) {
-      localStorage.setItem("safestep_seen", "1");
-    }
-    document.getElementById("welcome-modal").style.display = "none";
-  }
-
-  // Auto-show on first visit
-  if (!localStorage.getItem("safestep_seen")) {
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("welcome-modal").style.display = "flex";
-    });
-  }
-</script>
-
-</body>
+      // Auto-show on first visit
+      if (!localStorage.getItem("safestep_seen")) {
+        document.addEventListener("DOMContentLoaded", () => {
+          document.getElementById("welcome-modal").style.display = "flex";
+        });
+      }
+    </script>
+  </body>
 </html>

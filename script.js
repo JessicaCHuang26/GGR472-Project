@@ -4,26 +4,28 @@ STRINGS
 
 const STRINGS = {
   startPlaceholder: "Enter start location",
-  endPlaceholder:   "Enter destination",
-  fastest:          "Fastest",
-  safest:           "Safest",
-  both:             "Both",
-  min:              "min",
-  fewerIncidents:   "% fewer incidents near route",
-  similarRisk:      "Similar risk level",
-  sameRoute:        "This is the fastest and safest route available.",
-  calculating:      "Calculating routes…",
-  noRoute:          "No route found between these locations.",
-  loadingData:      "Still loading data, please wait…",
-  safetyWarning:    "Route passes through a high-crime area. Stay alert.",
-  myLocation:       "My location",
-  showingAll:       "Showing all areas",
-  showingMod:       "Showing Moderate Risk and above",
-  showingHigh:      "Showing High Risk and above",
-  showingDanger:    "Showing Danger zones only",
+  endPlaceholder: "Enter destination",
+  fastest: "Fastest",
+  safest: "Safest",
+  both: "Both",
+  min: "min",
+  fewerIncidents: "% fewer incidents near route",
+  similarRisk: "Similar risk level",
+  sameRoute: "This is the fastest and safest route available.",
+  calculating: "Calculating routes…",
+  noRoute: "No route found between these locations.",
+  loadingData: "Still loading data, please wait…",
+  safetyWarning: "Route passes through a high-crime area. Stay alert.",
+  myLocation: "My location",
+  showingAll: "Showing all areas",
+  showingMod: "Showing Moderate Risk and above",
+  showingHigh: "Showing High Risk and above",
+  showingDanger: "Showing Danger zones only",
 };
 
-function t(key) { return STRINGS[key] || key; }
+function t(key) {
+  return STRINGS[key] || key;
+}
 
 /*--------------------------------------------------------------------
 INITIALIZE MAP
@@ -42,7 +44,10 @@ const map = new mapboxgl.Map({
 });
 
 // Navigation controls (zoom +/-)
-map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+map.addControl(
+  new mapboxgl.NavigationControl({ showCompass: false }),
+  "bottom-right",
+);
 
 // Geolocate control (crosshair locate button)
 const geolocate = new mapboxgl.GeolocateControl({
@@ -61,31 +66,52 @@ geolocate.on("geolocate", (e) => {
   getRoute();
 });
 
-let incidentsData    = null;
+let incidentsData = null;
+let filteredIncidentsData = null;
 let neighbourhoodData = null;
-let cityAvgRate      = 700;   // updated once data loads
+let cityAvgRate = 700;
+let selectedYear = 2022;
 
 /*--------------------------------------------------------------------
 WAIT FOR MAP + DATA BEFORE ADDING LAYERS
 --------------------------------------------------------------------*/
 
-const mapReady = new Promise(resolve => map.on("load", resolve));
+const mapReady = new Promise((resolve) => map.on("load", resolve));
 
-const incidentsReady = fetch("https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/data/cleaned/toronto_incidents.geojson")
-  .then(res => res.json())
-  .then(data => { incidentsData = data; });
+const incidentsReady = fetch(
+  "https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/data/cleaned/toronto_incidents_by_year.geojson",
+)
+  .then((res) => {
+    if (!res.ok) throw new Error(`Incident file failed to load: ${res.status}`);
+    return res.json();
+  })
+  .then((data) => {
+    incidentsData = data;
+    updateIncidentYear(selectedYear);
+    console.log("Incident data loaded:", incidentsData.features.length);
+  })
+  .catch((err) => {
+    console.error("Incident fetch error:", err);
+    setStatus("Incident data failed to load.");
+  });
 
-const neighbourhoodReady = fetch("https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/Neighbourhood_Crime_Rates.geojson")
-  .then(res => res.json())
-  .then(data => {
+const neighbourhoodReady = fetch(
+  "https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/Neighbourhood_Crime_Rates.geojson",
+)
+  .then((res) => res.json())
+  .then((data) => {
     neighbourhoodData = data;
     // compute city-wide average for tooltip comparison
-    const rates = data.features.map(f => {
+    const rates = data.features.map((f) => {
       const p = f.properties;
-      return (p.ASSAULT_RATE_2022||0)+(p.ROBBERY_RATE_2022||0)+
-             (p.SHOOTING_RATE_2022||0)+(p.HOMICIDE_RATE_2022||0);
+      return (
+        (p.ASSAULT_RATE_2022 || 0) +
+        (p.ROBBERY_RATE_2022 || 0) +
+        (p.SHOOTING_RATE_2022 || 0) +
+        (p.HOMICIDE_RATE_2022 || 0)
+      );
     });
-    cityAvgRate = rates.reduce((a,b)=>a+b,0) / rates.length;
+    cityAvgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
   });
 
 Promise.all([mapReady, incidentsReady, neighbourhoodReady]).then(initLayers);
@@ -95,23 +121,23 @@ INIT LAYERS  (safe to call again after style switch)
 --------------------------------------------------------------------*/
 
 function initLayers() {
-
   /*-- NEIGHBOURHOOD CRIME CHOROPLETH --*/
 
   if (!map.getSource("neighbourhood_crime")) {
     map.addSource("neighbourhood_crime", {
       type: "geojson",
       data: neighbourhoodData,
-      generateId: true,          // required for featureState hover
+      generateId: true, // required for featureState hover
     });
   }
 
   // Helpers for rate expression (reused in both hover and normal paint)
-  const rateExpr = ["+",
-    ["coalesce", ["get", "ASSAULT_RATE_2022"],  0],
-    ["coalesce", ["get", "ROBBERY_RATE_2022"],  0],
+  const rateExpr = [
+    "+",
+    ["coalesce", ["get", "ASSAULT_RATE_2022"], 0],
+    ["coalesce", ["get", "ROBBERY_RATE_2022"], 0],
     ["coalesce", ["get", "SHOOTING_RATE_2022"], 0],
-    ["coalesce", ["get", "HOMICIDE_RATE_2022"], 0]
+    ["coalesce", ["get", "HOMICIDE_RATE_2022"], 0],
   ];
 
   if (!map.getLayer("neighbourhood_crime")) {
@@ -122,35 +148,56 @@ function initLayers() {
       paint: {
         // Hover: brighter, more saturated colours; normal: original palette
         "fill-color": [
-          "case", ["boolean", ["feature-state", "hover"], false],
+          "case",
+          ["boolean", ["feature-state", "hover"], false],
           // Hover: saturated yellow → orange → red
-          ["interpolate", ["linear"], rateExpr,
-            200,  "#FFE566",
-            415,  "#FFB300",
-            595,  "#FF6F00",
-            807,  "#E53935",
-            1008, "#B71C1C",
-            3500, "#7B1818"
+          [
+            "interpolate",
+            ["linear"],
+            rateExpr,
+            200,
+            "#FFE566",
+            415,
+            "#FFB300",
+            595,
+            "#FF6F00",
+            807,
+            "#E53935",
+            1008,
+            "#B71C1C",
+            3500,
+            "#7B1818",
           ],
           // Normal: soft yellow → orange → red
-          ["interpolate", ["linear"], rateExpr,
-            200,  "#FFFDE7",
-            415,  "#FFE082",
-            595,  "#FFB74D",
-            807,  "#EF5350",
-            1008, "#C62828",
-            3500, "#7B1818"
-          ]
+          [
+            "interpolate",
+            ["linear"],
+            rateExpr,
+            200,
+            "#FFFDE7",
+            415,
+            "#FFE082",
+            595,
+            "#FFB74D",
+            807,
+            "#EF5350",
+            1008,
+            "#C62828",
+            3500,
+            "#7B1818",
+          ],
         ],
         "fill-opacity": [
-          "case", ["boolean", ["feature-state", "hover"], false],
-          0.80,
-          0.38
+          "case",
+          ["boolean", ["feature-state", "hover"], false],
+          0.8,
+          0.38,
         ],
         "fill-outline-color": [
-          "case", ["boolean", ["feature-state", "hover"], false],
+          "case",
+          ["boolean", ["feature-state", "hover"], false],
           "#444444",
-          "#cccccc"
+          "#cccccc",
         ],
       },
     });
@@ -161,10 +208,22 @@ function initLayers() {
 
     // Metadata for each risk tier
     const LEVEL_META = {
-      danger:   { label: "Danger",        bg: "#B71C1C", desc: "High crime area — exercise caution" },
-      high:     { label: "High Risk",     bg: "#E53935", desc: "Higher crime area — take precautions" },
-      moderate: { label: "Moderate Risk", bg: "#FF8F00", desc: "Some crime activity — stay aware" },
-      low:      { label: "Low Risk",      bg: "#F9A825", desc: "Relatively safe area" },
+      danger: {
+        label: "Danger",
+        bg: "#B71C1C",
+        desc: "High crime area — exercise caution",
+      },
+      high: {
+        label: "High Risk",
+        bg: "#E53935",
+        desc: "Higher crime area — take precautions",
+      },
+      moderate: {
+        label: "Moderate Risk",
+        bg: "#FF8F00",
+        desc: "Some crime activity — stay aware",
+      },
+      low: { label: "Low Risk", bg: "#F9A825", desc: "Relatively safe area" },
     };
 
     map.on("mousemove", "neighbourhood_crime", (e) => {
@@ -173,51 +232,72 @@ function initLayers() {
 
       const feat = e.features[0];
       if (hoveredId !== null && hoveredId !== feat.id) {
-        map.setFeatureState({ source: "neighbourhood_crime", id: hoveredId }, { hover: false });
+        map.setFeatureState(
+          { source: "neighbourhood_crime", id: hoveredId },
+          { hover: false },
+        );
       }
       hoveredId = feat.id;
-      map.setFeatureState({ source: "neighbourhood_crime", id: hoveredId }, { hover: true });
+      map.setFeatureState(
+        { source: "neighbourhood_crime", id: hoveredId },
+        { hover: true },
+      );
 
       // Build tourist-friendly tooltip
-      const p    = feat.properties;
+      const p = feat.properties;
       const rate = Math.round(
-        (p.ASSAULT_RATE_2022  || 0) + (p.ROBBERY_RATE_2022  || 0) +
-        (p.SHOOTING_RATE_2022 || 0) + (p.HOMICIDE_RATE_2022 || 0)
+        (p.ASSAULT_RATE_2022 || 0) +
+          (p.ROBBERY_RATE_2022 || 0) +
+          (p.SHOOTING_RATE_2022 || 0) +
+          (p.HOMICIDE_RATE_2022 || 0),
       );
-      const key  = rate >= 1008 ? "danger" : rate >= 807 ? "high" : rate >= 595 ? "moderate" : "low";
+      const key =
+        rate >= 1008
+          ? "danger"
+          : rate >= 807
+            ? "high"
+            : rate >= 595
+              ? "moderate"
+              : "low";
       const meta = LEVEL_META[key];
 
       // How this area compares to city average
-      const diff    = Math.abs(Math.round(((rate - cityAvgRate) / cityAvgRate) * 100));
-      const compare = rate > cityAvgRate
-        ? `${diff}% above city average`
-        : rate < cityAvgRate
-          ? `${diff}% below city average`
-          : "At city average";
+      const diff = Math.abs(
+        Math.round(((rate - cityAvgRate) / cityAvgRate) * 100),
+      );
+      const compare =
+        rate > cityAvgRate
+          ? `${diff}% above city average`
+          : rate < cityAvgRate
+            ? `${diff}% below city average`
+            : "At city average";
 
       document.getElementById("hover-name").textContent = p.AREA_NAME;
 
       const lvlEl = document.getElementById("hover-level");
-      lvlEl.textContent      = meta.label;
+      lvlEl.textContent = meta.label;
       lvlEl.style.background = meta.bg;
       tooltip.style.borderLeftColor = meta.bg;
 
-      document.getElementById("hover-desc").textContent    = meta.desc;
+      document.getElementById("hover-desc").textContent = meta.desc;
       document.getElementById("hover-compare").textContent = compare;
 
       // Position near cursor, flip left if near right edge
-      const x    = e.originalEvent.clientX;
-      const y    = e.originalEvent.clientY;
+      const x = e.originalEvent.clientX;
+      const y = e.originalEvent.clientY;
       const offX = x > window.innerWidth - 230 ? -215 : 15;
-      tooltip.style.left    = (x + offX) + "px";
-      tooltip.style.top     = (y - 10)   + "px";
+      tooltip.style.left = x + offX + "px";
+      tooltip.style.top = y - 10 + "px";
       tooltip.style.display = "block";
     });
 
     map.on("mouseleave", "neighbourhood_crime", () => {
       map.getCanvas().style.cursor = "";
       if (hoveredId !== null) {
-        map.setFeatureState({ source: "neighbourhood_crime", id: hoveredId }, { hover: false });
+        map.setFeatureState(
+          { source: "neighbourhood_crime", id: hoveredId },
+          { hover: false },
+        );
         hoveredId = null;
       }
       tooltip.style.display = "none";
@@ -229,7 +309,7 @@ function initLayers() {
   if (!map.getSource("police_stations")) {
     map.addSource("police_stations", {
       type: "geojson",
-      data: "https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/Construction%20Features/Police%20Facility%20Locations%20-%204326.geojson"
+      data: "https://jessicachuang26.github.io/GGR472-Project-SafeSteps-/Construction%20Features/Police%20Facility%20Locations%20-%204326.geojson",
     });
   }
 
@@ -243,15 +323,20 @@ function initLayers() {
         "circle-color": "#1565c0",
         "circle-stroke-width": 2,
         "circle-stroke-color": "#ffffff",
-        "circle-opacity": 0.9
-      }
+        "circle-opacity": 0.9,
+      },
     });
 
-    const policePopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
+    const policePopup = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 10,
+    });
 
     map.on("mouseenter", "police_stations", (e) => {
       map.getCanvas().style.cursor = "pointer";
-      policePopup.setLngLat(e.features[0].geometry.coordinates)
+      policePopup
+        .setLngLat(e.features[0].geometry.coordinates)
         .setHTML(`<b>${e.features[0].properties.FACILITY} Police Station</b>`)
         .addTo(map);
     });
@@ -268,7 +353,7 @@ function initLayers() {
   if (!map.getSource("subway_lines")) {
     map.addSource("subway_lines", {
       type: "geojson",
-      data: "Construction Features/TTC_SUBWAY_LINES_WGS84.geojson"
+      data: "Construction Features/TTC_SUBWAY_LINES_WGS84.geojson",
     });
   }
 
@@ -281,18 +366,24 @@ function initLayers() {
       paint: {
         "line-color": "#ffffff",
         "line-width": 8,
-        "line-opacity": 1.0
-      }
+        "line-opacity": 1.0,
+      },
     });
   }
 
   if (!map.getLayer("subway_lines")) {
-    const lineColorExpr = ["match", ["get", "ROUTE_NAME"],
-      "LINE 1 (YONGE-UNIVERSITY)", "#FFD100",
-      "LINE 2 (BLOOR - DANFORTH)", "#00A651",
-      "LINE 3 (SCARBOROUGH)",      "#0082C8",
-      "LINE 4 (SHEPPARD)",         "#A05EB5",
-      "#FFD100"
+    const lineColorExpr = [
+      "match",
+      ["get", "ROUTE_NAME"],
+      "LINE 1 (YONGE-UNIVERSITY)",
+      "#FFD100",
+      "LINE 2 (BLOOR - DANFORTH)",
+      "#00A651",
+      "LINE 3 (SCARBOROUGH)",
+      "#0082C8",
+      "LINE 4 (SHEPPARD)",
+      "#A05EB5",
+      "#FFD100",
     ];
     map.addLayer({
       id: "subway_lines",
@@ -302,8 +393,8 @@ function initLayers() {
       paint: {
         "line-color": lineColorExpr,
         "line-width": 4,
-        "line-opacity": 1.0
-      }
+        "line-opacity": 1.0,
+      },
     });
   }
 
@@ -314,31 +405,23 @@ function initLayers() {
   const subwayPopup = new mapboxgl.Popup({
     closeButton: false,
     closeOnClick: false,
-    offset: 10
+    offset: 10,
   });
 
   map.on("mouseenter", "subway_lines", (e) => {
-
     map.getCanvas().style.cursor = "pointer";
 
     const props = e.features[0].properties;
 
     const lineName = props.ROUTE_NAME || `Line ${props.LINE}`;
 
-    subwayPopup
-      .setLngLat(e.lngLat)
-      .setHTML(`🚇 <b>${lineName}</b>`)
-      .addTo(map);
-
+    subwayPopup.setLngLat(e.lngLat).setHTML(`🚇 <b>${lineName}</b>`).addTo(map);
   });
 
   map.on("mouseleave", "subway_lines", () => {
-
     map.getCanvas().style.cursor = "";
     subwayPopup.remove();
-
   });
-
 }
 
 /*--------------------------------------------------------------------
@@ -346,7 +429,7 @@ GEOCODER
 --------------------------------------------------------------------*/
 
 let startCoords = null;
-let endCoords   = null;
+let endCoords = null;
 
 const startGeocoder = new MapboxGeocoder({
   accessToken: mapboxgl.accessToken,
@@ -370,7 +453,8 @@ document.getElementById("geocoder-end").appendChild(endGeocoder.onAdd(map));
 // Custom Google Maps–style pin markers
 function makePinEl(color, label) {
   const el = document.createElement("div");
-  el.style.cssText = "cursor:pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));";
+  el.style.cssText =
+    "cursor:pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));";
   el.innerHTML = `
     <svg width="32" height="44" viewBox="0 0 32 44" xmlns="http://www.w3.org/2000/svg">
       <path d="M16 0C7.163 0 0 7.163 0 16c0 10.667 16 28 16 28S32 26.667 32 16C32 7.163 24.837 0 16 0z"
@@ -383,8 +467,14 @@ function makePinEl(color, label) {
   return el;
 }
 
-const startMarker = new mapboxgl.Marker({ element: makePinEl("#34a853", ""), anchor: "bottom" });
-const endMarker   = new mapboxgl.Marker({ element: makePinEl("#ea4335", ""), anchor: "bottom" });
+const startMarker = new mapboxgl.Marker({
+  element: makePinEl("#34a853", ""),
+  anchor: "bottom",
+});
+const endMarker = new mapboxgl.Marker({
+  element: makePinEl("#ea4335", ""),
+  anchor: "bottom",
+});
 
 /*--------------------------------------------------------------------
 RECENT SEARCHES
@@ -394,13 +484,16 @@ const RECENT_KEY = "safesteps_recent";
 const RECENT_MAX = 5;
 
 function getRecentSearches() {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; }
-  catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY)) || [];
+  } catch {
+    return [];
+  }
 }
 
 function saveRecentSearch(name, coords) {
   if (!name || name === t("myLocation")) return;
-  let list = getRecentSearches().filter(r => r.name !== name);
+  let list = getRecentSearches().filter((r) => r.name !== name);
   list.unshift({ name, coords });
   if (list.length > RECENT_MAX) list = list.slice(0, RECENT_MAX);
   localStorage.setItem(RECENT_KEY, JSON.stringify(list));
@@ -413,12 +506,16 @@ function showRecentDropdown(inputEl, onSelect) {
 
   const drop = document.createElement("div");
   drop.id = "recent-dropdown";
-  drop.innerHTML = `<div class="recent-label">Recent</div>` +
-    list.map((r, i) =>
-      `<div class="recent-item" data-i="${i}">
+  drop.innerHTML =
+    `<div class="recent-label">Recent</div>` +
+    list
+      .map(
+        (r, i) =>
+          `<div class="recent-item" data-i="${i}">
         <span class="recent-name">${r.name}</span>
-      </div>`
-    ).join("");
+      </div>`,
+      )
+      .join("");
 
   // Position below the input
   const rect = inputEl.getBoundingClientRect();
@@ -427,7 +524,7 @@ function showRecentDropdown(inputEl, onSelect) {
     width:${rect.width}px;z-index:9999;
   `;
 
-  drop.querySelectorAll(".recent-item").forEach(el => {
+  drop.querySelectorAll(".recent-item").forEach((el) => {
     el.addEventListener("mousedown", (e) => {
       e.preventDefault();
       const item = list[parseInt(el.dataset.i)];
@@ -451,7 +548,7 @@ function attachRecentSearch(geocoderId, onSelect) {
     const input = document.querySelector(`#${geocoderId} input`);
     if (!input) return;
     input.addEventListener("focus", () => showRecentDropdown(input, onSelect));
-    input.addEventListener("blur",  () => setTimeout(removeRecentDropdown, 150));
+    input.addEventListener("blur", () => setTimeout(removeRecentDropdown, 150));
   }, 500);
 }
 
@@ -471,7 +568,10 @@ attachRecentSearch("geocoder-end", (name, coords) => {
 
 startGeocoder.on("result", (e) => {
   startCoords = e.result.center;
-  saveRecentSearch(e.result.place_name?.split(",")[0] || e.result.text, startCoords);
+  saveRecentSearch(
+    e.result.place_name?.split(",")[0] || e.result.text,
+    startCoords,
+  );
   startMarker.setLngLat(startCoords).addTo(map);
   map.flyTo({ center: startCoords, zoom: Math.max(map.getZoom(), 13) });
   getRoute();
@@ -479,7 +579,10 @@ startGeocoder.on("result", (e) => {
 
 endGeocoder.on("result", (e) => {
   endCoords = e.result.center;
-  saveRecentSearch(e.result.place_name?.split(",")[0] || e.result.text, endCoords);
+  saveRecentSearch(
+    e.result.place_name?.split(",")[0] || e.result.text,
+    endCoords,
+  );
   endMarker.setLngLat(endCoords).addTo(map);
   map.flyTo({ center: endCoords, zoom: Math.max(map.getZoom(), 13) });
   getRoute();
@@ -497,7 +600,7 @@ document.getElementById("gps-btn").addEventListener("click", () => {
 LANDMARKS
 --------------------------------------------------------------------*/
 
-document.querySelectorAll(".landmark-btn").forEach(btn => {
+document.querySelectorAll(".landmark-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     endCoords = [parseFloat(btn.dataset.lng), parseFloat(btn.dataset.lat)];
     endMarker.setLngLat(endCoords).addTo(map);
@@ -514,8 +617,11 @@ POLICE STATION TOGGLE
 
 document.getElementById("police-toggle").addEventListener("change", (e) => {
   if (map.getLayer("police_stations")) {
-    map.setLayoutProperty("police_stations", "visibility",
-      e.target.checked ? "visible" : "none");
+    map.setLayoutProperty(
+      "police_stations",
+      "visibility",
+      e.target.checked ? "visible" : "none",
+    );
   }
 });
 
@@ -528,7 +634,7 @@ document.getElementById("subway-toggle").addEventListener("change", (e) => {
     map.setLayoutProperty(
       "subway_lines",
       "visibility",
-      e.target.checked ? "visible" : "none"
+      e.target.checked ? "visible" : "none",
     );
   }
 });
@@ -539,30 +645,37 @@ ROUTE MODE TOGGLE
 
 let routeMode = "both";
 
-document.querySelectorAll(".toggle-btn").forEach(btn => {
+document.querySelectorAll(".toggle-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     routeMode = btn.dataset.mode;
-    document.querySelectorAll(".toggle-btn").forEach(b => b.classList.remove("active"));
+    document
+      .querySelectorAll(".toggle-btn")
+      .forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     applyRouteMode();
   });
 });
 
 function applyRouteMode() {
-  ["fastest", "safest"].forEach(label => {
-    const vis = (label === "fastest" && routeMode === "safest") ||
-                (label === "safest"  && routeMode === "fastest") ? "none" : "visible";
-    if (map.getLayer("route-" + label))        map.setLayoutProperty("route-" + label,        "visibility", vis);
-    if (map.getLayer("route-" + label + "-glow")) map.setLayoutProperty("route-" + label + "-glow", "visibility", vis);
+  ["fastest", "safest"].forEach((label) => {
+    const vis =
+      (label === "fastest" && routeMode === "safest") ||
+      (label === "safest" && routeMode === "fastest")
+        ? "none"
+        : "visible";
+    if (map.getLayer("route-" + label))
+      map.setLayoutProperty("route-" + label, "visibility", vis);
+    if (map.getLayer("route-" + label + "-glow"))
+      map.setLayoutProperty("route-" + label + "-glow", "visibility", vis);
   });
   const fastestRow = document.getElementById("fastest-row");
-  const safestRow  = document.getElementById("safest-row");
+  const safestRow = document.getElementById("safest-row");
   if (fastestRow) {
-    fastestRow.style.display = routeMode === "safest"  ? "none" : "flex";
+    fastestRow.style.display = routeMode === "safest" ? "none" : "flex";
     fastestRow.classList.toggle("active-route", routeMode === "fastest");
   }
   if (safestRow) {
-    safestRow.style.display  = routeMode === "fastest" ? "none" : "flex";
+    safestRow.style.display = routeMode === "fastest" ? "none" : "flex";
     safestRow.classList.toggle("active-route", routeMode === "safest");
   }
 }
@@ -570,7 +683,7 @@ function applyRouteMode() {
 // Click on route row to toggle showing only that route
 document.getElementById("fastest-row").addEventListener("click", () => {
   routeMode = routeMode === "fastest" ? "both" : "fastest";
-  document.querySelectorAll(".toggle-btn").forEach(b => {
+  document.querySelectorAll(".toggle-btn").forEach((b) => {
     b.classList.toggle("active", b.dataset.mode === routeMode);
   });
   applyRouteMode();
@@ -578,7 +691,7 @@ document.getElementById("fastest-row").addEventListener("click", () => {
 
 document.getElementById("safest-row").addEventListener("click", () => {
   routeMode = routeMode === "safest" ? "both" : "safest";
-  document.querySelectorAll(".toggle-btn").forEach(b => {
+  document.querySelectorAll(".toggle-btn").forEach((b) => {
     b.classList.toggle("active", b.dataset.mode === routeMode);
   });
   applyRouteMode();
@@ -590,30 +703,32 @@ COLLAPSIBLE PANELS
 
 function initCollapsible(headerId, bodyId, openDisplay) {
   const header = document.getElementById(headerId);
-  const body   = document.getElementById(bodyId) || header?.nextElementSibling;
+  const body = document.getElementById(bodyId) || header?.nextElementSibling;
   if (!header || !body) return;
   header.addEventListener("click", () => {
     const isOpen = body.style.display !== "none";
-    body.style.display = isOpen ? "none" : (openDisplay || "block");
+    body.style.display = isOpen ? "none" : openDisplay || "block";
     header.classList.toggle("open", !isOpen);
   });
 }
 
 initCollapsible("landmarks-toggle", "landmarks-grid", "flex");
-initCollapsible("layers-toggle",    "layers-body",    "block");
+initCollapsible("layers-toggle", "layers-body", "block");
 
 // Expand Popular Destinations when search is focused
 setTimeout(() => {
-  document.querySelectorAll("#geocoder-start input, #geocoder-end input").forEach(inp => {
-    inp.addEventListener("focus", () => {
-      const grid = document.getElementById("landmarks-grid");
-      const toggle = document.getElementById("landmarks-toggle");
-      if (grid && grid.style.display === "none") {
-        grid.style.display = "flex";
-        toggle?.classList.add("open");
-      }
+  document
+    .querySelectorAll("#geocoder-start input, #geocoder-end input")
+    .forEach((inp) => {
+      inp.addEventListener("focus", () => {
+        const grid = document.getElementById("landmarks-grid");
+        const toggle = document.getElementById("landmarks-toggle");
+        if (grid && grid.style.display === "none") {
+          grid.style.display = "flex";
+          toggle?.classList.add("open");
+        }
+      });
     });
-  });
 }, 600);
 
 /*--------------------------------------------------------------------
@@ -623,16 +738,16 @@ SWAP
 document.getElementById("swap-btn").addEventListener("click", () => {
   const tmpCoords = startCoords;
   startCoords = endCoords;
-  endCoords   = tmpCoords;
+  endCoords = tmpCoords;
 
   const startInput = document.querySelector("#geocoder-start input");
-  const endInput   = document.querySelector("#geocoder-end input");
+  const endInput = document.querySelector("#geocoder-end input");
   const tmpVal = startInput.value;
   startInput.value = endInput.value;
-  endInput.value   = tmpVal;
+  endInput.value = tmpVal;
 
   if (startCoords) startMarker.setLngLat(startCoords).addTo(map);
-  if (endCoords)   endMarker.setLngLat(endCoords).addTo(map);
+  if (endCoords) endMarker.setLngLat(endCoords).addTo(map);
 
   getRoute();
 });
@@ -642,8 +757,9 @@ CLEAR ROUTES
 --------------------------------------------------------------------*/
 
 function clearRoutes() {
-  ["fastest", "safest"].forEach(label => {
-    if (map.getLayer("route-" + label + "-glow")) map.removeLayer("route-" + label + "-glow");
+  ["fastest", "safest"].forEach((label) => {
+    if (map.getLayer("route-" + label + "-glow"))
+      map.removeLayer("route-" + label + "-glow");
     if (map.getLayer("route-" + label)) map.removeLayer("route-" + label);
     if (map.getSource("route-" + label)) map.removeSource("route-" + label);
   });
@@ -655,19 +771,31 @@ ROUTING
 --------------------------------------------------------------------*/
 
 async function fetchWalkingRoute(coords) {
-  const coordStr = coords.map(c => c.join(",")).join(";");
+  const coordStr = coords.map((c) => c.join(",")).join(";");
   const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordStr}?overview=full&geometries=geojson&access_token=${mapboxgl.accessToken}`;
-  const res  = await fetch(url);
+  const res = await fetch(url);
   const data = await res.json();
   return data.routes && data.routes[0] ? data.routes[0] : null;
 }
 
 function routeRiskPerKm(route) {
   const geojson = { type: "Feature", geometry: route.geometry };
-  const buffer  = turf.buffer(geojson, 0.05, { units: "kilometers" });
-  const nearby  = turf.pointsWithinPolygon(incidentsData, buffer);
+  const buffer = turf.buffer(geojson, 0.05, { units: "kilometers" });
+
+  const yearlyIncidents = getIncidentDataForCurrentYear();
+  const nearby = turf.pointsWithinPolygon(yearlyIncidents, buffer);
+
   let risk = 0;
-  nearby.features.forEach(f => { risk += Number(f.properties.weight); });
+  nearby.features.forEach((f) => {
+    risk += Number(f.properties.weight);
+  });
+  console.log(
+    "Scoring using year:",
+    selectedYear,
+    "filtered incidents:",
+    filteredIncidentsData.features.length,
+  );
+
   return risk / (route.distance / 1000);
 }
 
@@ -677,8 +805,12 @@ function crimeRateAt(lon, lat) {
   for (const f of neighbourhoodData.features) {
     if (turf.booleanPointInPolygon(pt, f)) {
       const p = f.properties;
-      return (p.ASSAULT_RATE_2022 || 0) + (p.ROBBERY_RATE_2022 || 0) +
-             (p.SHOOTING_RATE_2022 || 0) + (p.HOMICIDE_RATE_2022 || 0);
+      return (
+        (p.ASSAULT_RATE_2022 || 0) +
+        (p.ROBBERY_RATE_2022 || 0) +
+        (p.SHOOTING_RATE_2022 || 0) +
+        (p.HOMICIDE_RATE_2022 || 0)
+      );
     }
   }
   return 0;
@@ -688,35 +820,79 @@ function crimeRateAt(lon, lat) {
 function routePassesThroughHighCrime(route) {
   if (!neighbourhoodData) return false;
   const line = turf.lineString(route.geometry.coordinates);
-  const len  = turf.length(line, { units: "kilometers" });
+  const len = turf.length(line, { units: "kilometers" });
   const steps = Math.max(Math.ceil(len / 0.2), 5);
   for (let i = 0; i <= steps; i++) {
     const dist = (i / steps) * len;
-    const pt   = turf.along(line, dist, { units: "kilometers" });
+    const pt = turf.along(line, dist, { units: "kilometers" });
     if (crimeRateAt(...pt.geometry.coordinates) > 807) return true;
   }
   return false;
 }
 
 function generateWaypointCandidates() {
-  const line      = turf.lineString([startCoords, endCoords]);
+  const line = turf.lineString([startCoords, endCoords]);
   const totalDist = turf.length(line, { units: "kilometers" });
-  const bearing   = turf.bearing(turf.point(startCoords), turf.point(endCoords));
-  const offset    = Math.min(0.4, totalDist * 0.15); // scale offset with route length
+  const bearing = turf.bearing(turf.point(startCoords), turf.point(endCoords));
+  const offset = Math.min(0.4, totalDist * 0.15); // scale offset with route length
 
   // Only try midpoint, offset left and right — 2 candidates total
   const mid = turf.along(line, totalDist * 0.5, { units: "kilometers" });
   const [lon, lat] = mid.geometry.coordinates;
 
   return [
-    turf.destination([lon, lat], offset, (bearing - 90 + 360) % 360, { units: "kilometers" }).geometry.coordinates,
-    turf.destination([lon, lat], offset, (bearing + 90) % 360,       { units: "kilometers" }).geometry.coordinates,
+    turf.destination([lon, lat], offset, (bearing - 90 + 360) % 360, {
+      units: "kilometers",
+    }).geometry.coordinates,
+    turf.destination([lon, lat], offset, (bearing + 90) % 360, {
+      units: "kilometers",
+    }).geometry.coordinates,
   ];
+}
+
+function updateIncidentYear(year) {
+  selectedYear = Number(year);
+
+  if (!incidentsData || !incidentsData.features) {
+    filteredIncidentsData = null;
+    return;
+  }
+
+  filteredIncidentsData = {
+    type: "FeatureCollection",
+    features: incidentsData.features.filter(
+      (f) => Number(f.properties.year) === selectedYear,
+    ),
+  };
+
+  console.log(
+    `Year ${selectedYear}: ${filteredIncidentsData.features.length} incidents`,
+  );
+
+  console.log("Year:", year, "Count:", filteredIncidentsData.features.length);
+}
+
+function getIncidentDataForCurrentYear() {
+  return filteredIncidentsData || incidentsData;
 }
 
 async function getRoute() {
   if (!startCoords || !endCoords) return;
-  if (!incidentsData) { setStatus(t("loadingData")); return; }
+
+  if (!incidentsData) {
+    setStatus("Incident data file has not loaded yet.");
+    return;
+  }
+
+  if (!filteredIncidentsData) {
+    setStatus("Filtered incident data is not ready yet.");
+    return;
+  }
+
+  if (!filteredIncidentsData.features.length) {
+    setStatus(`No incident records found for ${selectedYear}.`);
+    return;
+  }
 
   clearRoutes();
   setStatus(t("calculating"));
@@ -726,35 +902,40 @@ async function getRoute() {
   let allRoutes = [];
 
   try {
-    // Fetch direct route + all waypoint routes in parallel
     const directRoute = await fetchWalkingRoute([startCoords, endCoords]);
-    if (!directRoute) { setStatus(t("noRoute")); return; }
+    if (!directRoute) {
+      setStatus(t("noRoute"));
+      return;
+    }
     allRoutes.push(directRoute);
 
     const waypointCandidates = generateWaypointCandidates();
     const waypointRoutes = await Promise.all(
-      waypointCandidates.map(wp =>
-        fetchWalkingRoute([startCoords, wp, endCoords]).catch(() => null)
-      )
+      waypointCandidates.map((wp) =>
+        fetchWalkingRoute([startCoords, wp, endCoords]).catch(() => null),
+      ),
     );
-    waypointRoutes.forEach(r => { if (r) allRoutes.push(r); });
+
+    waypointRoutes.forEach((r) => {
+      if (r) allRoutes.push(r);
+    });
   } catch {
     setStatus("Failed to fetch routes. Check your connection.");
     return;
   }
 
-  // Fastest = minimum duration across all candidates
-  const fastestRoute = allRoutes.reduce((a, b) => a.duration <= b.duration ? a : b);
-
-  // Safest = minimum risk/km, restricted to routes within 140% of fastest duration
-  const maxDuration = fastestRoute.duration * 1.4;
-  const safetyPool  = allRoutes.filter(r => r.duration <= maxDuration);
-  const safestRoute = safetyPool.reduce((a, b) =>
-    routeRiskPerKm(a) <= routeRiskPerKm(b) ? a : b
+  const fastestRoute = allRoutes.reduce((a, b) =>
+    a.duration <= b.duration ? a : b,
   );
 
-  // Same route if duration matches (within 5 seconds)
-  const isSameRoute = Math.abs(fastestRoute.duration - safestRoute.duration) < 5;
+  const maxDuration = fastestRoute.duration * 1.4;
+  const safetyPool = allRoutes.filter((r) => r.duration <= maxDuration);
+  const safestRoute = safetyPool.reduce((a, b) =>
+    routeRiskPerKm(a) <= routeRiskPerKm(b) ? a : b,
+  );
+
+  const isSameRoute =
+    Math.abs(fastestRoute.duration - safestRoute.duration) < 5;
 
   setStatus("");
 
@@ -764,8 +945,8 @@ async function getRoute() {
 
   if (!isSameRoute) {
     addRouteLayer("safest", safestRoute.geometry, "#3cd649");
-    const fastRisk  = routeRiskPerKm(fastestRoute);
-    const safeRisk  = routeRiskPerKm(safestRoute);
+    const fastRisk = routeRiskPerKm(fastestRoute);
+    const safeRisk = routeRiskPerKm(safestRoute);
     const reduction = Math.round((1 - safeRisk / fastRisk) * 100);
 
     document.getElementById("safest-row").style.display = "flex";
@@ -780,7 +961,6 @@ async function getRoute() {
     document.getElementById("same-route-note").textContent = t("sameRoute");
   }
 
-  // Safety warning if best safe route still goes through high-crime area
   if (routePassesThroughHighCrime(isSameRoute ? fastestRoute : safestRoute)) {
     const warn = document.getElementById("safety-warning");
     warn.textContent = t("safetyWarning");
@@ -791,17 +971,18 @@ async function getRoute() {
   document.getElementById("route-panel").style.display = "flex";
   applyRouteMode();
 
-  // Fit map to show full routes
   const bounds = new mapboxgl.LngLatBounds();
-  fastestRoute.geometry.coordinates.forEach(c => bounds.extend(c));
-  if (!isSameRoute) safestRoute.geometry.coordinates.forEach(c => bounds.extend(c));
+  fastestRoute.geometry.coordinates.forEach((c) => bounds.extend(c));
+  if (!isSameRoute) {
+    safestRoute.geometry.coordinates.forEach((c) => bounds.extend(c));
+  }
   map.fitBounds(bounds, { padding: 80 });
 }
 
 function addRouteLayer(label, geometry, color) {
   map.addSource("route-" + label, {
     type: "geojson",
-    data: { type: "Feature", geometry }
+    data: { type: "Feature", geometry },
   });
   // Glow layer (wide + blurred)
   map.addLayer({
@@ -812,8 +993,8 @@ function addRouteLayer(label, geometry, color) {
       "line-color": color,
       "line-width": 14,
       "line-opacity": 0.25,
-      "line-blur": 6
-    }
+      "line-blur": 6,
+    },
   });
   // Main route line
   map.addLayer({
@@ -821,7 +1002,7 @@ function addRouteLayer(label, geometry, color) {
     type: "line",
     source: "route-" + label,
     layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": color, "line-width": 7, "line-opacity": 1.0 }
+    paint: { "line-color": color, "line-width": 7, "line-opacity": 1.0 },
   });
 }
 
@@ -837,22 +1018,43 @@ function setStatus(msg) {
   }
 }
 
+const yearSlider = document.getElementById("year-slider");
+const yearValue = document.getElementById("year-value");
+
+if (yearSlider && yearValue) {
+  yearSlider.addEventListener("input", (e) => {
+    const year = Number(e.target.value);
+    yearValue.textContent = year;
+
+    updateIncidentYear(year);
+
+    if (startCoords && endCoords) {
+      getRoute();
+    }
+  });
+}
+
 /*--------------------------------------------------------------------
 RISK LEVEL SLIDER
 --------------------------------------------------------------------*/
 
-const RISK_THRESHOLDS  = [0, 595, 807, 1008];
-const RISK_LABEL_KEYS  = ["showingAll", "showingMod", "showingHigh", "showingDanger"];
+const RISK_THRESHOLDS = [0, 595, 807, 1008];
+const RISK_LABEL_KEYS = [
+  "showingAll",
+  "showingMod",
+  "showingHigh",
+  "showingDanger",
+];
 
-const rateFilterExpr = ["+",
-  ["coalesce", ["get", "ASSAULT_RATE_2022"],  0],
-  ["coalesce", ["get", "ROBBERY_RATE_2022"],  0],
+const rateFilterExpr = [
+  "+",
+  ["coalesce", ["get", "ASSAULT_RATE_2022"], 0],
+  ["coalesce", ["get", "ROBBERY_RATE_2022"], 0],
   ["coalesce", ["get", "SHOOTING_RATE_2022"], 0],
-  ["coalesce", ["get", "HOMICIDE_RATE_2022"], 0]
+  ["coalesce", ["get", "HOMICIDE_RATE_2022"], 0],
 ];
 
 document.getElementById("risk-filter").addEventListener("change", (e) => {
-
   const value = e.target.value;
 
   if (!map.getLayer("neighbourhood_crime")) return;
@@ -864,19 +1066,11 @@ document.getElementById("risk-filter").addEventListener("change", (e) => {
   }
 
   if (value === "moderate") {
-    filter = [
-      "all",
-      [">=", rateFilterExpr, 595],
-      ["<", rateFilterExpr, 807]
-    ];
+    filter = ["all", [">=", rateFilterExpr, 595], ["<", rateFilterExpr, 807]];
   }
 
   if (value === "high") {
-    filter = [
-      "all",
-      [">=", rateFilterExpr, 807],
-      ["<", rateFilterExpr, 1008]
-    ];
+    filter = ["all", [">=", rateFilterExpr, 807], ["<", rateFilterExpr, 1008]];
   }
 
   if (value === "danger") {
@@ -884,5 +1078,4 @@ document.getElementById("risk-filter").addEventListener("change", (e) => {
   }
 
   map.setFilter("neighbourhood_crime", filter);
-
 });
